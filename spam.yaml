@@ -11,4 +11,4 @@ Resources:
       Description: ''
       MemorySize: 128
       Timeout: 3
-      Role: 'arn:aws:iam::587787576424:role/lambda-s3-role'
+      Role: 'arn:aws:iam::380014966022:role/lambda-s3-role'
