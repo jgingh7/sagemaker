@@ -19,8 +19,8 @@ runtime = boto3.client('runtime.sagemaker')
 def lambda_handler(event, context):
     print("DEBUG event:", event)
     s3_info = event['Records'][0]['s3']
-    bucket_name = s3_info['bucket']['name'] #emailbucketts
-    key_name = s3_info['object']['key'] #i9n26937lh0272713uqlo04f13kqocmjsei3c201
+    bucket_name = s3_info['bucket']['name']
+    key_name = s3_info['object']['key']
     
     
     # get the email in S3
@@ -70,7 +70,11 @@ def lambda_handler(event, context):
     decoded_sagemaker_response = json.loads(sagemaker_response['Body'].read().decode())
     print("DEBUG decoded_sagemaker_response:", decoded_sagemaker_response)
     
-    classification = decoded_sagemaker_response['predicted_label'][0][0]
+    classification_number = decoded_sagemaker_response['predicted_label'][0][0]
+    if classification_number == 0.0:
+        classification = 'HAM'
+    elif classification_number == 1.0:
+        classification = 'SPAM'
     classification_confidence_score = decoded_sagemaker_response['predicted_probability'][0][0] * 100
     print("DEBUG classification:", classification)
     print("DEBUG classification_confidence_score:", classification_confidence_score)
