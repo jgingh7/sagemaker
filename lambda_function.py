@@ -1,10 +1,7 @@
 import json
 import boto3
-import datetime
 import pytz
-import os
-import io
-import csv
+import email
 
 from sms_spam_classifier_utilities import one_hot_encode
 from sms_spam_classifier_utilities import vectorize_sequences
@@ -13,7 +10,7 @@ vocabulary_length = 9013
 s3_client = boto3.client('s3')
 ses_client = boto3.client('ses')
 
-ENDPOINT_NAME = 'sms-spam-classifier-mxnet-2021-04-28-17-48-46-147'
+ENDPOINT_NAME = 'SAGEMAKER_ENDPOINT'
 runtime = boto3.client('runtime.sagemaker')
 
 def lambda_handler(event, context):
@@ -31,24 +28,28 @@ def lambda_handler(event, context):
     print('DEBUG s3_response:', s3_response)
     
     email_string = s3_response['Body'].read().decode('utf-8')
-    email_arr = email_string.splitlines()
+    msg = email.message_from_string(email_string)
+    received_from = msg["from"]
+    email_subject = msg["subject"]
     
-    email_subject = ""
-    received_from = ""
-    from_idx = 0
-    for i, line in enumerate(email_arr):
-        if line.startswith('Subject:'):
-            email_subject = line[9:]
-        elif line.startswith('From:'):
-            received_from = line[6:]
-        elif line.startswith('X-SES-Outgoing'):
-            from_idx = i + 1
-        
-        if email_subject and received_from and from_idx:
-            break
-            
-    body_arr = email_arr[from_idx:]
+    #reading the body part of msg
+    if msg.is_multipart():
+        for part in msg.walk():
+            ctype = part.get_content_type()
+            cdispo = str(part.get("Content-Disposition"))
+    
+            # skip any text/plain (txt) attachments
+            if ctype == "text/plain" and "attachment" not in cdispo:
+                email_payload = part.get_payload(decode=True)  # decode
+                break
+    else:
+        email_payload = msg.get_payload(decode=True)
+    
+    email_body_string = email_payload.decode("utf-8")
+    body_arr = email_body_string.splitlines()
     print("DEBUG body_arr:", body_arr)
+    print("DEBUG received_from:", received_from)
+    print("DEBUG email_subject:", email_subject)
     
     body_string_to_check = ' '.join(body_arr)
     print("DEBUG body_string_to_check:", body_string_to_check)
@@ -103,7 +104,7 @@ def lambda_handler(event, context):
         response = ses_client.send_email(
             Destination={
                 'ToAddresses': [
-                    'jayaws2021@gmail.com',
+                    received_from,
                 ],
             },
             Message={
