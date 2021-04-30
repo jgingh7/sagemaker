@@ -1,5 +1,6 @@
 # spam-identifier
 If you send an email to the registered address (currently to@jin-gyu-lee.me)
+
 you will get a reply back saying it is classified as SPAM or HAM.
 
 ## Architecture Diagram
